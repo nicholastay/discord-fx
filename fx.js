@@ -2,6 +2,7 @@
 
 const Discord = require('discord.js')
     , fs      = require('fs')
+    , path    = require('path')
     , repl    = require('repl')
     , fxc     = require('./fxc.json')
     , client  = new Discord.Client()
@@ -16,10 +17,16 @@ replS.context.client = client;
 // load names into memory from scanning folders
 let reloadFX = () => {
     fx = {};
-    fs.readdirSync('./fx').forEach(fc => {
+
+    // https://stackoverflow.com/questions/18112204/get-all-directories-within-directory-nodejs
+    let folders = fs.readdirSync('./fx').filter(f => { return fs.statSync(path.join('./fx', f)).isDirectory() });
+
+    folders.forEach(fc => {
         let f = prefix + fc;
         fx[f] = [];
-        for (let i = 1; i <= fs.readdirSync(`./fx/${fc}`).length; i++) {
+
+        let fxFiles = fs.readdirSync(`./fx/${fc}`).filter(f => { return path.extname(f) === '.mp3' });
+        for (let i = 1; i <= fxFiles.length; i++) {
             try {
                 let fl = `./fx/${fc}/${i}.mp3`;
                 fs.accessSync(fl, fs.F_OK);
