@@ -1,0 +1,14 @@
+{
+  "name": "discord-fx",
+  "version": "0.1.0",
+  "description": "Based off AIRHORN SOLUTIONS... f(x)",
+  "main": "fx.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Nicholas Tay <nexerq@gmail.com> (http://nicholastay.github.io)",
+  "license": "ISC",
+  "dependencies": {
+    "discord.js": "github:hydrabolt/discord.js#0e54d77"
+  }
+}
