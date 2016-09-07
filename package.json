@@ -17,6 +17,6 @@
   },
   "homepage": "https://github.com/nicholastay/discord-fx#readme",
   "dependencies": {
-    "eris": "^0.3.0"
+    "eris": "github:abalabahaha/eris#03138c981858a368803b562617f10f7cb7b7cccd"
   }
 }
