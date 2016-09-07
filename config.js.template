@@ -1,0 +1,10 @@
+"use strict";
+
+const CONFIG = {
+    discord: {
+        token: "my_ridiculously_long_token_here?"
+    },
+    prefix: "!"
+};
+
+module.exports = CONFIG;

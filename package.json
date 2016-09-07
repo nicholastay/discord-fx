@@ -1,0 +1,22 @@
+{
+  "name": "discord-fx",
+  "version": "0.2.0",
+  "description": "airhorn.solutions-esque sound player for Discord",
+  "main": "fx.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nicholastay/discord-fx.git"
+  },
+  "author": "Nicholas Tay <nexerq@gmail.com>",
+  "license": "Zlib",
+  "bugs": {
+    "url": "https://github.com/nicholastay/discord-fx/issues"
+  },
+  "homepage": "https://github.com/nicholastay/discord-fx#readme",
+  "dependencies": {
+    "eris": "^0.3.0"
+  }
+}
