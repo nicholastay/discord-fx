@@ -21,6 +21,7 @@ class Fxbot {
 
         this.client = null;
         this.fx = {}; // effects store
+        this.connQueues = {};
         this.fxLocation = path.join(__dirname, "fx");
         this.prefix = config.discord.prefix || "!";
 
@@ -69,10 +70,10 @@ class Fxbot {
         if (!message.content.startsWith(this.prefix)
          || !message.member // PM
          || !message.member.voiceState
-         || !message.member.voiceState.channelID
-         || this.client.voiceConnections.find(vc => vc.id === message.channel.guild.id)) // already playing
+         || !message.member.voiceState.channelID)
             return;
-
+        
+        let existingConn = this.client.voiceConnections.find(vc => vc.id === message.channel.guild.id);
         let spaceIndex = message.content.indexOf(" ");
         let triggerSent = spaceIndex < 0 ? message.content : message.content.substr(0, spaceIndex);
         triggerSent = triggerSent.replace(this.prefix, "");
@@ -84,12 +85,25 @@ class Fxbot {
             else
                 ogg = this.fx[triggerSent][getRandomInt(0, this.fx[triggerSent].length)];
 
-            this.client.joinVoiceChannel(message.member.voiceState.channelID)
-                .then(conn => {
-                    conn.play(ogg, { format: "ogg" });
-                    conn.on("end", () => this.client.leaveVoiceChannel(message.member.voiceState.channelID));
-                })
-                .catch(console.log);
+            if (existingConn) {
+                if (this.connQueues[message.member.voiceState.channelID].length > 4)
+                    return;
+                this.connQueues[message.member.voiceState.channelID].push(ogg);
+            } else {
+                this.connQueues[message.member.voiceState.channelID] = [];
+                this.client.joinVoiceChannel(message.member.voiceState.channelID)
+                    .then(conn => {
+                        conn.play(ogg, { format: "ogg" });
+                        conn.on("end", () => {
+                            if (this.connQueues[message.member.voiceState.channelID].length < 1) {
+                                delete(this.connQueues[message.member.voiceState.channelID]);
+                                return this.client.leaveVoiceChannel(message.member.voiceState.channelID);
+                            }
+                            conn.play(this.connQueues[message.member.voiceState.channelID].shift(), { format: "ogg" });
+                        });
+                    })
+                    .catch(console.log);
+            }
         }
     }
 }
