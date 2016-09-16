@@ -1,5 +1,13 @@
 "use strict";
 
+/*
+ * encoding note
+ * 
+ * Mika Matsuda - Today at 1:17 PM
+ * ffmpeg -i snowblind.mp3 -c:a libopus -b:a 64000 -vbr on -frame_duration 60 snowblind.ogg
+ *
+ */
+
 const Eris = require("eris")
     , fs = require("fs")
     , path = require("path");
@@ -35,10 +43,10 @@ class Fxbot {
         let possibleBundles = fs.readdirSync(this.fxLocation).filter(file => fs.statSync(path.join(this.fxLocation, file)).isDirectory());
         let loadedSoundBundles = 0;
         possibleBundles.forEach(bundleName => {
-            let possibleDcas = fs.readdirSync(path.join(this.fxLocation, bundleName)).filter(file => file.endsWith(".dca"));
-            if (possibleDcas.length > 0)
-                this.fx[bundleName] = possibleDcas.map(dca => path.resolve(this.fxLocation, bundleName, dca));
-            console.log(`Loaded bundle ${bundleName} [${possibleDcas.length} sounds]`);
+            let possibleOggs = fs.readdirSync(path.join(this.fxLocation, bundleName)).filter(file => file.endsWith(".ogg"));
+            if (possibleOggs.length > 0)
+                this.fx[bundleName] = possibleOggs.map(ogg => path.resolve(this.fxLocation, bundleName, ogg));
+            console.log(`Loaded bundle ${bundleName} [${possibleOggs.length} sounds]`);
         });
     }
 
@@ -55,15 +63,15 @@ class Fxbot {
         triggerSent = triggerSent.replace(this.prefix, "");
         if (this.fx[triggerSent]) {
             console.log(`${message.channel.guild.name} :: #${message.channel.name} // ${message.author.username}#${message.author.discriminator} ~~ FX: ${triggerSent}`);
-            let dca;
+            let ogg;
             if (this.fx[triggerSent].length > 1)
-                dca = this.fx[triggerSent][0];
+                ogg = this.fx[triggerSent][0];
             else
-                dca = this.fx[triggerSent][getRandomInt(0, this.fx[triggerSent].length)];
+                ogg = this.fx[triggerSent][getRandomInt(0, this.fx[triggerSent].length)];
 
             this.client.joinVoiceChannel(message.member.voiceState.channelID)
                 .then(conn => {
-                    setTimeout(() => conn.playDCA(dca), 250);
+                    setTimeout(() => conn.play(ogg, { format: "ogg" }), 250);
                     conn.on("end", () => this.client.leaveVoiceChannel(message.member.voiceState.channelID));
                 })
                 .catch(console.log);
