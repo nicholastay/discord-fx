@@ -5,6 +5,8 @@
  * 
  * Mika Matsuda - Today at 1:17 PM
  * ffmpeg -i snowblind.mp3 -c:a libopus -b:a 64000 -vbr on -frame_duration 60 snowblind.ogg
+ * 
+ * thanks yous abal :^)
  *
  */
 
