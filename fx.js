@@ -16,6 +16,9 @@ const config = require("./config");
 
 class Fxbot {
     constructor() {
+        console.log("f(x) [r e w r i t e]");
+        console.log("starting up...\n");
+
         this.client = null;
         this.fx = {}; // effects store
         this.fxLocation = path.join(__dirname, "fx");
@@ -24,7 +27,11 @@ class Fxbot {
         if (!config.discord.token)
             throw new Error("No token in config");
 
-        this.loadSounds();
+        this.reloadSounds();
+
+        this.repl = require("repl").start("f(x)> ");
+        console.log("");
+        this.registerRepl();
     }
 
     start() {
@@ -39,15 +46,23 @@ class Fxbot {
         this.client.on("messageCreate", this.handleMessage.bind(this));
     }
 
-    loadSounds() {
+    registerRepl() {
+        this.repl.defineCommand("r", {
+            help: "[f(x)] Reload all fx bundles.",
+            action: () => this.reloadSounds()
+        });
+    }
+
+    reloadSounds() {
+        this.fx = {};
         let possibleBundles = fs.readdirSync(this.fxLocation).filter(file => fs.statSync(path.join(this.fxLocation, file)).isDirectory());
-        let loadedSoundBundles = 0;
         possibleBundles.forEach(bundleName => {
             let possibleOggs = fs.readdirSync(path.join(this.fxLocation, bundleName)).filter(file => file.endsWith(".ogg"));
             if (possibleOggs.length > 0)
                 this.fx[bundleName] = possibleOggs.map(ogg => path.resolve(this.fxLocation, bundleName, ogg));
             console.log(`Loaded bundle ${bundleName} [${possibleOggs.length} sounds]`);
         });
+        console.log(`Finished loading ${Object.keys(this.fx).length} fx bundles.`);
     }
 
     handleMessage(message) {
@@ -71,7 +86,7 @@ class Fxbot {
 
             this.client.joinVoiceChannel(message.member.voiceState.channelID)
                 .then(conn => {
-                    setTimeout(() => conn.play(ogg, { format: "ogg" }), 250);
+                    conn.play(ogg, { format: "ogg" });
                     conn.on("end", () => this.client.leaveVoiceChannel(message.member.voiceState.channelID));
                 })
                 .catch(console.log);
@@ -82,9 +97,6 @@ class Fxbot {
 const bot = new Fxbot();
 global.Fx = bot;
 bot.start();
-
-const replS = require("repl").start('f(x)> ');
-console.log('\n');
 
 
 
