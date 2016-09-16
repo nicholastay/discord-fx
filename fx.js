@@ -60,8 +60,10 @@ class Fxbot {
         let possibleBundles = fs.readdirSync(this.fxLocation).filter(file => fs.statSync(path.join(this.fxLocation, file)).isDirectory());
         possibleBundles.forEach(bundleName => {
             let possibleOggs = fs.readdirSync(path.join(this.fxLocation, bundleName)).filter(file => file.endsWith(".ogg"));
-            if (possibleOggs.length > 0)
-                this.fx[bundleName] = possibleOggs.map(ogg => path.resolve(this.fxLocation, bundleName, ogg));
+            if (possibleOggs.length > 0) {
+                this.fx[bundleName] = {};
+                possibleOggs.forEach(ogg => this.fx[bundleName][ogg.replace(".ogg", "")] = path.resolve(this.fxLocation, bundleName, ogg));
+            }
             console.log(`Loaded bundle ${bundleName} [${possibleOggs.length} sounds]`);
         });
         console.log(`Finished loading ${Object.keys(this.fx).length} fx bundles.`);
@@ -78,13 +80,19 @@ class Fxbot {
         let spaceIndex = message.content.indexOf(" ");
         let triggerSent = spaceIndex < 0 ? message.content : message.content.substr(0, spaceIndex);
         triggerSent = triggerSent.replace(this.prefix, "");
+        let specificSound = spaceIndex < 0 ? null : message.content.substr(spaceIndex+1, message.content.length);
         if (this.fx[triggerSent]) {
+            let bundle = this.fx[triggerSent];
+            let bundleKeys = Object.keys(bundle);
             console.log(`${message.channel.guild.name} :: #${message.channel.name} // ${message.author.username}#${message.author.discriminator} ~~ FX: ${triggerSent}`);
+            
             let ogg;
-            if (this.fx[triggerSent].length < 2)
-                ogg = this.fx[triggerSent][0];
+            if (specificSound && bundle[specificSound])
+                ogg = bundle[specificSound];
+            else if (bundleKeys.length < 2)
+                ogg = bundle[bundleKeys[0]];
             else
-                ogg = this.fx[triggerSent][getRandomInt(0, this.fx[triggerSent].length)];
+                ogg = bundle[bundleKeys[getRandomInt(0, bundleKeys.length)]];
 
             if (existingConn) {
                 if (this.connQueues[message.member.voiceState.channelID].length > 4)
