@@ -52,6 +52,7 @@ class Fxbot {
             help: "[f(x)] Reload all fx bundles.",
             action: () => this.reloadSounds()
         });
+        this.repl.context.fx = this;
     }
 
     reloadSounds() {
@@ -80,7 +81,7 @@ class Fxbot {
         if (this.fx[triggerSent]) {
             console.log(`${message.channel.guild.name} :: #${message.channel.name} // ${message.author.username}#${message.author.discriminator} ~~ FX: ${triggerSent}`);
             let ogg;
-            if (this.fx[triggerSent].length > 1)
+            if (this.fx[triggerSent].length < 2)
                 ogg = this.fx[triggerSent][0];
             else
                 ogg = this.fx[triggerSent][getRandomInt(0, this.fx[triggerSent].length)];
