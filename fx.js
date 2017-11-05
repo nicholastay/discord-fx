@@ -75,9 +75,7 @@ class Fxbot {
 
     handleMessage(message) {
         if (!message.content.startsWith(this.prefix)
-         || !message.member // PM
-         || !message.member.voiceState
-         || !message.member.voiceState.channelID)
+         || !message.member /* PM */ )
             return;
 
         let spaceIndex = message.content.indexOf(" ");
@@ -103,6 +101,10 @@ class Fxbot {
             else
                 message.channel.createMessage(message.author.mention + " ~ " + tail + ": Available effects - " + bundleKeys.join(", "));
         }
+
+        if (!message.member.voiceState
+         || !message.member.voiceState.channelID)
+            return; // no voice state - cant play any triggers anyway
 
         if (this.fx[triggerSent]) {
             let bundle = this.fx[triggerSent];
