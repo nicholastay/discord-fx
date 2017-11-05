@@ -16,8 +16,6 @@ const Eris = require("eris")
     , fs = require("fs")
     , path = require("path");
 
-const config = require("./config");
-
 class Fxbot {
     constructor() {
         console.log("f(x) [r e w r i t e]");
@@ -27,11 +25,16 @@ class Fxbot {
         this.fx = {}; // effects store
         this.connQueues = {};
         this.fxLocation = path.join(__dirname, "fx");
-        this.prefix = config.prefix || "!";
 
-        if (!config.discord.token)
+        this.config = {};
+        this.reloadConfig();
+
+        if (!this.config.discord.token)
             throw new Error("No token in config");
-        this.alias = config.alias || {};
+        // properties: (loaded in reloadConfig)
+        // this.prefix
+        // this.alias
+        // this.autojoin
 
         this.reloadSounds();
 
@@ -40,8 +43,19 @@ class Fxbot {
         this.registerRepl();
     }
 
+    reloadConfig() {
+        hotReload("./config.js");
+
+        this.config = require("./config.js");
+        console.log("Config loaded");
+
+        this.prefix = this.config.prefix || "!";
+        this.alias = this.config.alias || {};
+        this.autojoin = this.config.autojoin || {};
+    }
+
     start() {
-        this.client = new Eris(config.discord.token);
+        this.client = new Eris(this.config.discord.token);
         this.attachEvents();
         this.client.connect();
     }
@@ -49,13 +63,19 @@ class Fxbot {
     attachEvents() {
         this.client.on("ready", () => console.log("Connected to Discord."));
         this.client.on("disconnect", () => console.log("Disconnected from Discord, will try to auto-reconnect..."));
+
         this.client.on("messageCreate", this.handleMessage.bind(this));
+        this.client.on("voiceChannelJoin", this.autoJoinHandler.bind(this));
     }
 
     registerRepl() {
         this.repl.defineCommand("r", {
-            help: "[f(x)] Reload all fx bundles.",
+            help: "[f(x)] Reload all fx bundles",
             action: () => this.reloadSounds()
+        });
+        this.repl.defineCommand("rc", {
+            help: "[f(x)] Reload config",
+            action: () => this.reloadConfig()
         });
         this.repl.context.fx = this;
     }
@@ -141,6 +161,22 @@ class Fxbot {
             message.channel.createMessage(message.author.mention + " ~ " + tail + ": Available effects - " + bundleKeys.join(", "));
     }
 
+    autoJoinHandler(member, channel) {
+        if (!this.autojoin[member.id])
+            return;
+
+        let bundle = this.autojoin[member.id];
+        let sound;
+        if (bundle.includes(".")) { // specific
+            let s = splitHeadTail(this.autojoin[member.id], ".");
+            bundle = s.head;
+            sound = s.tail;
+        }
+
+        console.log(`${channel.guild.name} :: VC#${channel.name} ~~ AUTOJOIN: ${member.id}`);
+        this.playSfx(bundle, sound, channel.id);
+    }
+
     playSfx(bundleName, specificSound, voiceChannelId) {
         let bundle = this.fx[bundleName];
         let bundleKeys = Object.keys(bundle);
@@ -196,4 +232,12 @@ function splitHeadTail(str, delimiter) {
     let tail = i < 0 ? null : str.substr(i + 1, str.length);
 
     return { head, tail };
+}
+
+function hotReload(mod) {
+    var resName = require.resolve(mod);
+    var cached = require.cache[resName];
+
+    if (cached)
+        delete require.cache[resName];
 }
