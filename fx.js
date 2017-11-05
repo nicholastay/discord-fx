@@ -27,10 +27,11 @@ class Fxbot {
         this.fx = {}; // effects store
         this.connQueues = {};
         this.fxLocation = path.join(__dirname, "fx");
-        this.prefix = config.discord.prefix || "!";
+        this.prefix = config.prefix || "!";
 
         if (!config.discord.token)
             throw new Error("No token in config");
+        this.alias = config.alias || {};
 
         this.reloadSounds();
 
@@ -79,11 +80,8 @@ class Fxbot {
          || !message.member /* PM */ )
             return;
 
-        // command parsing
-        let spaceIndex = message.content.indexOf(" ");
-        let command = spaceIndex < 0 ? message.content : message.content.substr(0, spaceIndex);
-        command = command.replace(this.prefix, "");
-        let tail = spaceIndex < 0 ? null : message.content.substr(spaceIndex+1, message.content.length);
+        let { head, tail } = splitHeadTail(message.content, " ");
+        let command = head.replace(this.prefix, "");
 
         if (command === "bundles")
             return this.bundlesCommand(command, tail, message);
@@ -91,6 +89,20 @@ class Fxbot {
         if (!message.member.voiceState
          || !message.member.voiceState.channelID)
             return; // no voice state - cant play any triggers anyway
+
+        // check for alias
+        if (this.alias[command]) {
+            // switch the context
+            console.log(`${message.channel.guild.name} :: #${message.channel.name} // ${message.author.username}#${message.author.discriminator} ~~ ALIAS: ${command} --> ${this.alias[command]}`);
+            if (this.alias[command].includes(".")) {
+                // special custom tail
+                let s = splitHeadTail(this.alias[command], ".");
+                command = s.head;
+                tail = s.tail;
+            } else {
+                command = this.alias[command];
+            }
+        }
 
         // if a sfx exists
         if (this.fx[command]) {
@@ -143,9 +155,9 @@ class Fxbot {
 
         if (this.connQueues[voiceChannelId]) { // existing connection queue found
             if (this.connQueues[voiceChannelId].length > QUEUE_LENGTH_PER_VOICE)
-                return "(dropped @ queue)";
+                return "dropped @ queue";
             this.connQueues[voiceChannelId].push(ogg);
-            return "(+queue)";
+            return "+queue";
         } else {
             this.connQueues[voiceChannelId] = [];
             this.client.joinVoiceChannel(voiceChannelId)
@@ -161,7 +173,7 @@ class Fxbot {
                     });
                 })
                 .catch(console.log);
-            return "(new)";
+            return "new";
         }
     }
 }
@@ -175,4 +187,13 @@ bot.start();
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/random
 function getRandomInt(min, max) {
     return Math.floor(Math.random() * (max - min)) + min;
+}
+
+function splitHeadTail(str, delimiter) {
+    // command parsing style
+    let i = str.indexOf(delimiter);
+    let head = i < 0 ? str : str.substr(0, i);
+    let tail = i < 0 ? null : str.substr(i + 1, str.length);
+
+    return { head, tail };
 }
