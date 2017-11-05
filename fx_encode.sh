@@ -20,4 +20,4 @@ OUT="$DIR/fx/$2"
 if [ ! -d $OUT ]; then
     mkdir $OUT
 fi
-ffmpeg -i "$1" -c:a libopus -b:a 64000 -vbr on -frame_duration 60 "$OUT/$3.ogg"
+ffmpeg -i "$1" -c:a libopus -b:a 64000 -vbr on -frame_duration 20 "$OUT/$3.ogg"
