@@ -74,75 +74,94 @@ class Fxbot {
     }
 
     handleMessage(message) {
-        if (!message.content.startsWith(this.prefix)
+        if (message.author.id === this.client.user.id // ignore self
+         || !message.content.startsWith(this.prefix)
          || !message.member /* PM */ )
             return;
 
+        // command parsing
         let spaceIndex = message.content.indexOf(" ");
-        let triggerSent = spaceIndex < 0 ? message.content : message.content.substr(0, spaceIndex);
-        triggerSent = triggerSent.replace(this.prefix, "");
+        let command = spaceIndex < 0 ? message.content : message.content.substr(0, spaceIndex);
+        command = command.replace(this.prefix, "");
         let tail = spaceIndex < 0 ? null : message.content.substr(spaceIndex+1, message.content.length);
 
-        if (triggerSent === "bundles") {
-            if (!tail) {
-                console.log(`${message.channel.guild.name} :: #${message.channel.name} // ${message.author.username}#${message.author.discriminator} ~~ Bundles Help`);
-                message.channel.createMessage(message.author.mention + " ~ Available bundles: " + Object.keys(this.fx).join(", "));
-                return;
-            }
-
-            let bundle = this.fx[tail];
-            if (!bundle) {
-                message.channel.createMessage(message.author.mention + " ~ Invalid bundle.");
-            }
-
-            let bundleKeys = Object.keys(bundle);
-            if (bundleKeys.length === 1)
-                message.channel.createMessage(message.author.mention + " ~ " + tail + ": This bundle only relates to a single sound effect.");
-            else
-                message.channel.createMessage(message.author.mention + " ~ " + tail + ": Available effects - " + bundleKeys.join(", "));
-        }
+        if (command === "bundles")
+            return this.bundlesCommand(command, tail, message);
 
         if (!message.member.voiceState
          || !message.member.voiceState.channelID)
             return; // no voice state - cant play any triggers anyway
 
-        if (this.fx[triggerSent]) {
-            let bundle = this.fx[triggerSent];
-            let bundleKeys = Object.keys(bundle);
-            
-            let logMsg = `${message.channel.guild.name} :: #${message.channel.name} // ${message.author.username}#${message.author.discriminator} ~~ FX: ${triggerSent}${tail ? ` (${tail})` : ""}`;
-            
-            let ogg;
-            // tail will be a specific sound they wanted from a bundle
-            if (tail && bundle[tail])
-                ogg = bundle[tail];
-            else if (bundleKeys.length < 2)
-                ogg = bundle[bundleKeys[0]];
-            else
-                ogg = bundle[bundleKeys[getRandomInt(0, bundleKeys.length)]];
+        // if a sfx exists
+        if (this.fx[command]) {
+            let logMsg = `${message.channel.guild.name} :: #${message.channel.name} // ${message.author.username}#${message.author.discriminator} ~~ FX: ${command}${tail ? ` (${tail})` : ""}`;
+            let status;
 
+            // find vc to play in
+            let voiceChannelId = message.member.voiceState.channelID;
             let existingConn = this.client.voiceConnections.find(vc => vc.id === message.channel.guild.id);
-            if (existingConn) {
-                if (this.connQueues[message.member.voiceState.channelID].length > QUEUE_LENGTH_PER_VOICE)
-                    return console.log(logMsg + " (dropped @ queue)");
-                console.log(logMsg + " (+queue)");
-                this.connQueues[message.member.voiceState.channelID].push(ogg);
-            } else {
-                console.log(logMsg + " (new)");
-                this.connQueues[message.member.voiceState.channelID] = [];
-                this.client.joinVoiceChannel(message.member.voiceState.channelID)
-                    .then(conn => {
-                        conn.play(ogg, { format: "ogg" });
-                        conn.on("end", () => {
-                            if (this.connQueues[message.member.voiceState.channelID].length < 1) {
-                                delete(this.connQueues[message.member.voiceState.channelID]);
-                                return this.client.leaveVoiceChannel(message.member.voiceState.channelID);
-                            }
-                            conn.play(this.connQueues[message.member.voiceState.channelID].shift(), { format: "ogg" });
-                        });
-                    })
-                    .catch(console.log);
-            }
+
+            if (existingConn && (existingConn.channelID !== voiceChannelId)) // just a check
+                status = "already in another chan in guild";
+            else
+                status = this.playSfx(command, tail, voiceChannelId);
+
+            console.log(`${logMsg} (${status})`);
+        }
+    }
+
+    bundlesCommand(command, tail, message) {
+        if (!tail) {
+            console.log(`${message.channel.guild.name} :: #${message.channel.name} // ${message.author.username}#${message.author.discriminator} ~~ Bundles Help`);
+            message.channel.createMessage(message.author.mention + " ~ Available bundles: " + Object.keys(this.fx).join(", "));
+            return;
+        }
+
+        let bundle = this.fx[tail];
+        if (!bundle) {
+            message.channel.createMessage(message.author.mention + " ~ Invalid bundle.");
+        }
+
+        let bundleKeys = Object.keys(bundle);
+        if (bundleKeys.length === 1)
+            message.channel.createMessage(message.author.mention + " ~ " + tail + ": This bundle only relates to a single sound effect.");
+        else
+            message.channel.createMessage(message.author.mention + " ~ " + tail + ": Available effects - " + bundleKeys.join(", "));
+    }
+
+    playSfx(bundleName, specificSound, voiceChannelId) {
+        let bundle = this.fx[bundleName];
+        let bundleKeys = Object.keys(bundle);
+
+        let ogg;
+        if (specificSound && bundle[specificSound]) // they wanted something specific
+            ogg = bundle[specificSound];
+        else if (bundleKeys.length < 2) // theres only 1 sound
+            ogg = bundle[bundleKeys[0]];
+        else // rng!
+            ogg = bundle[bundleKeys[getRandomInt(0, bundleKeys.length)]];
+
+        if (this.connQueues[voiceChannelId]) { // existing connection queue found
+            if (this.connQueues[voiceChannelId].length > QUEUE_LENGTH_PER_VOICE)
+                return "(dropped @ queue)";
+            this.connQueues[voiceChannelId].push(ogg);
+            return "(+queue)";
+        } else {
+            this.connQueues[voiceChannelId] = [];
+            this.client.joinVoiceChannel(voiceChannelId)
+                .then(conn => {
+                    conn.play(ogg, { format: "ogg" });
+                    conn.on("end", () => {
+                        if (this.connQueues[voiceChannelId].length < 1) {
+                            delete(this.connQueues[voiceChannelId]);
+                            return this.client.leaveVoiceChannel(voiceChannelId);
+                        }
+
+                        conn.play(this.connQueues[voiceChannelId].shift(), { format: "ogg" });
+                    });
+                })
+                .catch(console.log);
+            return "(new)";
         }
     }
 }
