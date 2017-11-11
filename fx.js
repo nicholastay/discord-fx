@@ -152,6 +152,7 @@ class Fxbot {
         let bundle = this.fx[tail];
         if (!bundle) {
             message.channel.createMessage(message.author.mention + " ~ Invalid bundle.");
+            return;
         }
 
         let bundleKeys = Object.keys(bundle);
