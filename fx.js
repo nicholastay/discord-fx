@@ -25,6 +25,7 @@ class Fxbot {
         this.fx = {}; // effects store
         this.connQueues = {};
         this.fxLocation = path.join(__dirname, "fx");
+        this.disabledAutos = [];
 
         this.config = {};
         this.reloadConfig();
@@ -105,6 +106,8 @@ class Fxbot {
 
         if (command === "bundles")
             return this.bundlesCommand(command, tail, message);
+        if (command === "auto")
+            return this.autoCommand(message);
 
         if (!message.member.voiceState
          || !message.member.voiceState.channelID)
@@ -162,8 +165,25 @@ class Fxbot {
             message.channel.createMessage(message.author.mention + " ~ " + tail + ": Available effects - " + bundleKeys.join(", "));
     }
 
+    autoCommand(message) {
+        if (!this.autojoin[message.author.id])
+            return;
+
+        console.log(`${message.author.username}#${message.author.discriminator} ~~ Toggled auto`);
+
+        if (this.disabledAutos.includes(message.author.id)) {
+            this.disabledAutos.splice(this.disabledAutos.indexOf(message.author.id), 1);
+            message.channel.createMessage(message.author.mention + " ~ " + "Re-enabled your auto.");
+            return;
+        }
+
+        this.disabledAutos.push(message.author.id);
+        message.channel.createMessage(message.author.mention + " ~ " + "Disabled your auto.");
+    }
+
     autoJoinHandler(member, channel) {
-        if (!this.autojoin[member.id])
+        if (!this.autojoin[member.id]
+         || this.disabledAutos.includes(member.id))
             return;
 
         let bundle = this.autojoin[member.id];
