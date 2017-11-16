@@ -18,7 +18,9 @@ const Eris = require("eris")
 
 class Fxbot {
     constructor() {
-        console.log("f(x) [r e w r i t e]");
+        this.version = require("./package.json").version;
+
+        console.log(`f(x) [r e w r i t e] <v${this.version}>`);
         console.log("starting up...\n");
 
         this.client = null;
@@ -62,7 +64,12 @@ class Fxbot {
     }
 
     attachEvents() {
-        this.client.on("ready", () => console.log("Connected to Discord."));
+        this.client.on("ready", () => {
+            console.log("Connected to Discord.");
+            this.client.editStatus("online", {
+                name: `${this.prefix}bundles | f(x) v${this.version}`
+            });
+        });
         this.client.on("disconnect", () => console.log("Disconnected from Discord, will try to auto-reconnect..."));
 
         this.client.on("messageCreate", this.handleMessage.bind(this));
