@@ -13,6 +13,7 @@
 const QUEUE_LENGTH_PER_VOICE = 4;
 
 const Eris = require("eris")
+    , strftime = require("strftime")
     , fs = require("fs")
     , path = require("path");
 
@@ -50,7 +51,7 @@ class Fxbot {
         hotReload("./config.js");
 
         this.config = require("./config.js");
-        console.log("Config loaded");
+        log("Config loaded");
 
         this.prefix = this.config.prefix || "!";
         this.alias = this.config.alias || {};
@@ -65,12 +66,12 @@ class Fxbot {
 
     attachEvents() {
         this.client.on("ready", () => {
-            console.log("Connected to Discord.");
+            log("Connected to Discord.");
             this.client.editStatus("online", {
                 name: `${this.prefix}bundles | f(x) v${this.version}`
             });
         });
-        this.client.on("disconnect", () => console.log("Disconnected from Discord, will try to auto-reconnect..."));
+        this.client.on("disconnect", () => log("Disconnected from Discord, will try to auto-reconnect..."));
 
         this.client.on("messageCreate", this.handleMessage.bind(this));
         this.client.on("voiceChannelJoin", this.autoJoinHandler.bind(this));
@@ -97,9 +98,9 @@ class Fxbot {
                 this.fx[bundleName] = {};
                 possibleOggs.forEach(ogg => this.fx[bundleName][ogg.replace(".ogg", "")] = path.resolve(this.fxLocation, bundleName, ogg));
             }
-            console.log(`Loaded bundle ${bundleName} [${possibleOggs.length} sounds]`);
+            log(`Loaded bundle ${bundleName} [${possibleOggs.length} sounds]`);
         });
-        console.log(`Finished loading ${Object.keys(this.fx).length} fx bundles.`);
+        log(`Finished loading ${Object.keys(this.fx).length} fx bundles.`);
     }
 
     handleMessage(message) {
@@ -126,7 +127,7 @@ class Fxbot {
         // check for alias
         if (this.alias[command]) {
             // switch the context
-            console.log(`${message.channel.guild.name} :: #${message.channel.name} // ${message.author.username}#${message.author.discriminator} ~~ ALIAS: ${command} --> ${this.alias[command]}`);
+            log(`${message.channel.guild.name} :: #${message.channel.name} // ${message.author.username}#${message.author.discriminator} ~~ ALIAS: ${command} --> ${this.alias[command]}`);
             if (this.alias[command].includes(".")) {
                 // special custom tail
                 let s = splitHeadTail(this.alias[command], ".");
@@ -151,13 +152,13 @@ class Fxbot {
             else
                 status = this.playSfx(command, tail, voiceChannelId);
 
-            console.log(`${logMsg} (${status})`);
+            log(`${logMsg} (${status})`);
         }
     }
 
     bundlesCommand(command, tail, message) {
         if (!tail) {
-            console.log(`${message.channel.guild.name} :: #${message.channel.name} // ${message.author.username}#${message.author.discriminator} ~~ Bundles Help`);
+            log(`${message.channel.guild.name} :: #${message.channel.name} // ${message.author.username}#${message.author.discriminator} ~~ Bundles Help`);
             message.channel.createMessage(message.author.mention + " ~ Available bundles: " + Object.keys(this.fx).join(", "));
             return;
         }
@@ -179,7 +180,7 @@ class Fxbot {
         if (!this.autojoin[message.author.id])
             return;
 
-        console.log(`${message.author.username}#${message.author.discriminator} ~~ Toggled auto`);
+        log(`${message.author.username}#${message.author.discriminator} ~~ Toggled auto`);
 
         if (this.disabledAutos.includes(message.author.id)) {
             this.disabledAutos.splice(this.disabledAutos.indexOf(message.author.id), 1);
@@ -204,7 +205,7 @@ class Fxbot {
             sound = s.tail;
         }
 
-        console.log(`${channel.guild.name} :: VC#${channel.name} ~~ AUTOJOIN: ${member.id}`);
+        log(`${channel.guild.name} :: VC#${channel.name} ~~ AUTOJOIN: ${member.id}`);
         this.playSfx(bundle, sound, channel.id);
     }
 
@@ -239,7 +240,7 @@ class Fxbot {
                         conn.play(this.connQueues[voiceChannelId].shift(), { format: "ogg" });
                     });
                 })
-                .catch(console.log);
+                .catch(log);
             return "new";
         }
     }
@@ -271,4 +272,8 @@ function hotReload(mod) {
 
     if (cached)
         delete require.cache[resName];
+}
+
+function log(...t) {
+    console.log(`[${strftime("%Y-%m-%d %H:%M:%S")}]`, ...t);
 }
