@@ -104,17 +104,20 @@ class Fxbot {
 
     handleMessage(message) {
         if (message.author.id === this.client.user.id // ignore self
-         || !message.content.startsWith(this.prefix)
-         || !message.member /* PM */ )
+         || !message.content.startsWith(this.prefix))
             return;
 
         let { head, tail } = splitHeadTail(message.content, " ");
         let command = head.replace(this.prefix, "");
 
-        if (command === "bundles")
-            return this.bundlesCommand(command, tail, message);
         if (command === "auto")
             return this.autoCommand(message);
+
+        if (!message.member)
+            return; // we in a PM
+
+        if (command === "bundles")
+            return this.bundlesCommand(command, tail, message);
 
         if (!message.member.voiceState
          || !message.member.voiceState.channelID)
